@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using API.Data;
@@ -26,7 +25,11 @@ public class CartController : ControllerBase {
 
         if (User.IsInRole("Admin")) return await _context.CartPositions.ToListAsync();
 
-        return await _context.CartPositions.Where(cp => IsUserAccessToCartPositionAllowed(User, cp)).ToListAsync();
+        var userId = int.Parse(User.FindFirst("UserId")!.Value);
+        
+        var cart = _context.CartPositions.Where(cp => cp.UserId == userId);
+        
+        return await cart.ToListAsync();
     }
 
     // GET: api/Cart/5
@@ -42,7 +45,7 @@ public class CartController : ControllerBase {
             return NotFound();
         }
 
-        if (!IsUserAccessToCartPositionAllowed(User, cartPosition)) {
+        if (!IsUserAccessToCartPositionAllowed(cartPosition)) {
             return Problem("You do not have access to the data.");
         }
 
@@ -52,7 +55,7 @@ public class CartController : ControllerBase {
     // PUT: api/Cart/5
     [HttpPut("{id}")]
     public async Task<IActionResult> PutCartPosition(int id, CartPosition cartPosition) {
-        if (!IsUserAccessToCartPositionAllowed(User, cartPosition)) {
+        if (!IsUserAccessToCartPositionAllowed(cartPosition)) {
             return Problem("You do not have access to the data.");
         }
 
@@ -84,7 +87,7 @@ public class CartController : ControllerBase {
             return Problem("Entity set 'DataContext.CartPositions'  is null.");
         }
 
-        if (!IsUserAccessToCartPositionAllowed(User, cartPosition)) {
+        if (!IsUserAccessToCartPositionAllowed(cartPosition)) {
             return Problem("You do not have access to the data.");
         }
 
@@ -107,7 +110,7 @@ public class CartController : ControllerBase {
             return NotFound();
         }
 
-        if (!IsUserAccessToCartPositionAllowed(User, cartPosition)) {
+        if (!IsUserAccessToCartPositionAllowed(cartPosition)) {
             return Problem("You do not have access to the data.");
         }
 
@@ -121,9 +124,9 @@ public class CartController : ControllerBase {
         return (_context.CartPositions?.Any(e => e.Id == id)).GetValueOrDefault();
     }
 
-    private bool IsUserAccessToCartPositionAllowed(ClaimsPrincipal user, CartPosition cartPosition) {
+    private bool IsUserAccessToCartPositionAllowed(CartPosition cartPosition) {
         if (User.IsInRole("Admin")) return true;
-        var userId = int.Parse(User.FindFirst("UserId")!.ToString());
+        var userId = int.Parse(User.FindFirst("UserId")!.Value);
 
         return cartPosition.UserId == userId;
     }
